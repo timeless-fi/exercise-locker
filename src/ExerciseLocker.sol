@@ -7,6 +7,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IVotingEscrow} from "./external/IVotingEscrow.sol";
 import {IOptionsToken} from "./external/IOptionsToken.sol";
 import {IBalancerOracle} from "./external/IBalancerOracle.sol";
+import {ILockDiscountConfig} from "./interfaces/ILockDiscountConfig.sol";
 
 contract ExerciseLocker is Owned {
     error ExerciseLocker__ZeroAmount();
@@ -18,14 +19,22 @@ contract ExerciseLocker is Owned {
     IBalancerOracle internal immutable oracle;
     ERC20 internal immutable paymentToken;
 
-    constructor(IVotingEscrow votingEscrow_, IOptionsToken optionsToken_, IBalancerOracle oracle_, address owner_)
-        Owned(owner_)
-    {
+    ILockDiscountConfig public lockDiscountConfig;
+
+    constructor(
+        IVotingEscrow votingEscrow_,
+        IOptionsToken optionsToken_,
+        IBalancerOracle oracle_,
+        ILockDiscountConfig lockDiscountConfig_,
+        address owner_
+    ) Owned(owner_) {
         votingEscrow = votingEscrow_;
         optionsToken = optionsToken_;
         oracle = oracle_;
         ERC20 paymentToken_ = optionsToken_.paymentToken();
         paymentToken = paymentToken_;
+
+        lockDiscountConfig = lockDiscountConfig_;
 
         // set approval to optionsToken
         paymentToken_.approve(address(optionsToken_), type(uint256).max);
@@ -67,7 +76,11 @@ contract ExerciseLocker is Owned {
         // transfer oLIT from user
         optionsToken.transferFrom(msg.sender, address(this), amount);
 
+        // adjust multiplier based on user lock time
+        uint16 adjustedMultiplier = lockDiscountConfig.getAdjustedMultiplier(oracleMultiplier, lockedBalance.end);
+
         // call oracle to update multiplier based on user lock time
+        oracle.setParams(adjustedMultiplier, oracleSecs, oracleAgo, oracleMinPrice);
 
         // exercise oLIT to get LIT
         optionsToken.exercise(amount, maxPaymentAmount, recipient, deadline);
@@ -81,5 +94,9 @@ contract ExerciseLocker is Owned {
 
     function setOracleOwner(address newOwner) external onlyOwner {
         oracle.setOwner(newOwner);
+    }
+
+    function setLockDiscountConfig(ILockDiscountConfig newLockDiscountConfig) external onlyOwner {
+        lockDiscountConfig = newLockDiscountConfig;
     }
 }
