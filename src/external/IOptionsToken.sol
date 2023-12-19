@@ -5,6 +5,8 @@ import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
+import {IBalancerOracle} from "./IBalancerOracle.sol";
+
 interface IOptionsToken is IERC20 {
     /// @notice Exercises options tokens to purchase the underlying tokens.
     /// @dev The options tokens are not burnt but sent to address(0) to avoid messing up the
@@ -32,4 +34,6 @@ interface IOptionsToken is IERC20 {
         returns (uint256 paymentAmount);
 
     function paymentToken() external view returns (ERC20);
+    function oracle() external view returns (IBalancerOracle);
+    function underlyingToken() external view returns (ERC20);
 }

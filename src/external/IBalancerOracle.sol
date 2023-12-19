@@ -33,5 +33,9 @@ interface IBalancerOracle {
     /// price to mitigate potential attacks on the TWAP oracle.
     function minPrice() external view returns (uint128);
 
-    function setOwner(address newOwner) external;
+    function transferOwnership(address newOwner) external;
+
+    function balancerTwapOracle() external view returns (address);
+
+    function owner() external view returns (address);
 }
