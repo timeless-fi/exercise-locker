@@ -52,6 +52,11 @@ contract ExerciseLockerTest is Test {
         uint256 initialLockAmount = 1000 ether;
         locker.votingEscrow().create_lock(initialLockAmount, block.timestamp + 4 * 365 days);
 
+        // cache initial balances
+        uint256 beforeOlitBalance = locker.optionsToken().balanceOf(user);
+        uint256 beforeWethBalance = locker.paymentToken().balanceOf(user);
+        (, uint256[] memory beforePoolbalances,) = locker.BALANCER_VAULT().getPoolTokens(locker.LIT_WETH_POOL_ID());
+
         // exercise 100 oLIT
         (uint256 paymentAmount, uint256 bptPairWethAmount, uint256 bptLocked) = locker.exerciseAndLock({
             amount: 100 ether,
@@ -67,6 +72,30 @@ contract ExerciseLockerTest is Test {
         // check payment amount
         assertGt(paymentAmount, 0, "didn't pay anything");
         assertLe(paymentAmount, 1000 ether, "paid too much");
+
+        // check BPT WETH pair amount
+        assertGt(bptPairWethAmount, 0, "didn't pay anything for BPT WETH pairing");
+        assertLe(bptPairWethAmount, 1000 ether, "paid too much for BPT WETH pairing");
+
+        // check oLIT balance
+        assertEq(beforeOlitBalance - locker.optionsToken().balanceOf(user), 100 ether, "didn't burn oLIT");
+
+        // check WETH balance
+        assertEq(
+            beforeWethBalance - locker.paymentToken().balanceOf(user),
+            paymentAmount + bptPairWethAmount,
+            "didn't pay WETH"
+        );
+
+        // check pool balances
+        (, uint256[] memory poolBalances,) = locker.BALANCER_VAULT().getPoolTokens(locker.LIT_WETH_POOL_ID());
+        assertApproxEqRelDecimal(
+            poolBalances[0] * 1e18 / poolBalances[1],
+            beforePoolbalances[0] * 1e18 / beforePoolbalances[1],
+            0.01e18,
+            18,
+            "Balancer pool token ratio changed too much"
+        );
 
         // check bpt locked
         IVotingEscrow.LockedBalance memory lockedBalance = locker.votingEscrow().locked(user);
