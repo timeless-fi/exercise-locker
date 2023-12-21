@@ -1,13 +1,13 @@
-# Foundry template
+# Exercise locker
 
-This is a template for a Foundry project.
+Enables offering a better discount when exercising oLIT options and immediately locking it for veLIT.
 
 ## Installation
 
 To install with [Foundry](https://github.com/gakonst/foundry):
 
 ```
-forge install [user]/[repo]
+forge install timeless-fi/exercise-locker
 ```
 
 ## Local development
@@ -29,7 +29,7 @@ forge build
 ### Testing
 
 ```
-forge test
+forge test -f mainnet
 ```
 
 ### Contract deployment
